@@ -11,6 +11,7 @@ import (
 
 	"github.com/corpix/uarand"
 	"github.com/pkg/errors"
+	"go.uber.org/multierr"
 )
 
 // Option is an option to set on remote reader
@@ -66,6 +67,52 @@ func (r *Reader) Read(url string) (*http.Response, error) {
 		}
 	}
 	return resp, errors.Wrap(err, "can't read url")
+}
+
+type response struct {
+	url   string
+	bytes []byte
+	error error
+}
+
+func (r Reader) bytes(url string, respChan chan response) {
+	var rBytes response
+	resp, err := r.Read(url)
+	if err != nil {
+		rBytes.error = err
+		respChan <- rBytes
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		rBytes.error = errors.Errorf("Got %q: can't read given url %q", resp.Status, url)
+		respChan <- rBytes
+		return
+	}
+	b, err := ioutil.ReadAll(resp.Body)
+	respChan <- response{
+		url:   url,
+		bytes: b,
+		error: err,
+	}
+}
+
+// BytesAll reads bytes from given urls with configured reader
+func (r *Reader) BytesAll(urls ...string) (map[string][]byte, error) {
+	respChan := make(chan response)
+	defer close(respChan)
+	for _, url := range urls {
+		go r.bytes(url, respChan)
+	}
+
+	urlResp := make(map[string][]byte)
+	var err error
+	for range urls {
+		resp := <-respChan
+		urlResp[resp.url] = resp.bytes
+		err = multierr.Append(err, resp.error)
+	}
+	return urlResp, err
 }
 
 // Bytes reads bytes from given url with configured reader

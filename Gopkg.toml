@@ -6,6 +6,10 @@
   name = "github.com/pkg/errors"
   version = "v0.8.1"
 
+[[constraint]]
+  name = "go.uber.org/multierr"
+  version = "1.1.0"
+
 [prune]
   go-tests = true
   unused-packages = true

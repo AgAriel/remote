@@ -29,7 +29,7 @@ func TestTimeout(t *testing.T) {
 
 func TestRandomUserAgent(t *testing.T) {
 	r1 := NewReader()
-	for i:= 0; i < 100 ; i++ {
+	for i := 0; i < 100; i++ {
 		if r1.userAgent != NewReader().userAgent {
 			return
 		}
@@ -38,12 +38,19 @@ func TestRandomUserAgent(t *testing.T) {
 }
 
 func TestCustomUserAgent(t *testing.T) {
-	newAgent:= "Mozilla/5.0 (Windows NT 6.1; Win64; x64) " +
+	newAgent := "Mozilla/5.0 (Windows NT 6.1; Win64; x64) " +
 		"AppleWebKit/537.36 (KHTML, like Gecko) " +
 		"Chrome/63.0.3239.132 Safari/537.36"
 	r := NewReader(UserAgent(newAgent))
 	if r.userAgent != newAgent {
 		t.Error("failed to set user agent")
+	}
+}
+
+func TestReader_BytesAll(t *testing.T) {
+	_, err := NewReader().BytesAll("https://google.com", "https://stackoverflow.com")
+	if err != nil {
+		t.Error(err)
 	}
 }
 
@@ -84,12 +91,14 @@ func TestReader_JSON(t *testing.T) {
 
 	// try to read valid and invalid json
 	url := "http://localhost:8080/json"
-	type testData struct {Content int `json:"content"`}
-	if err := NewReader().JSON(url + "/invalid",  &testData{}); err == nil {
+	type testData struct {
+		Content int `json:"content"`
+	}
+	if err := NewReader().JSON(url+"/invalid", &testData{}); err == nil {
 		t.Error("failed to read invalid json response")
 	}
 	result := &testData{}
-	if err := NewReader().JSON(url + "/valid", result); err != nil {
+	if err := NewReader().JSON(url+"/valid", result); err != nil {
 		t.Error("failed to read json response")
 	}
 	if result.Content != 1 {
