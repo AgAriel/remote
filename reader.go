@@ -72,20 +72,20 @@ func (r *Reader) Read(url string) (*http.Response, error) {
 type response struct {
 	url   string
 	bytes []byte
-	error error
+	err   error
 }
 
 func (r Reader) bytes(url string, respChan chan response) {
 	var rBytes response
 	resp, err := r.Read(url)
 	if err != nil {
-		rBytes.error = err
+		rBytes.err = err
 		respChan <- rBytes
 		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		rBytes.error = errors.Errorf("Got %q: can't read given url %q", resp.Status, url)
+		rBytes.err = errors.Errorf("Got %q: can't read given url %q", resp.Status, url)
 		respChan <- rBytes
 		return
 	}
@@ -93,7 +93,7 @@ func (r Reader) bytes(url string, respChan chan response) {
 	respChan <- response{
 		url:   url,
 		bytes: b,
-		error: err,
+		err:   err,
 	}
 }
 
@@ -110,7 +110,7 @@ func (r *Reader) BytesAll(urls ...string) (map[string][]byte, error) {
 	for range urls {
 		resp := <-respChan
 		urlResp[resp.url] = resp.bytes
-		err = multierr.Append(err, resp.error)
+		err = multierr.Append(err, resp.err)
 	}
 	return urlResp, err
 }
